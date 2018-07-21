@@ -2,7 +2,7 @@
 
 # Author: LI SHIDI
 # Date: July 20, 2018
-# This module can calculate the robot pose transformation
+# This module can process the robot pose transformation calculation
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -19,15 +19,15 @@ class Transform:
         self.__translation = translation
         self.style = np.array([0, 0, 0])
         if rotation.size == 9:
-            self.__matrix3x3 = rotation
+            self.__matrix3x3 = np.matrix(rotation).reshape(3, 3)
             self.style[MATRIX] = 1
 
         elif rotation.size == 3:
-            self.__YPR = rotation
+            self.__YPR = np.array(rotation).reshape(3)
             self.style[EULER] = 1
 
         elif rotation.size == 4:
-            self.__quat = rotation
+            self.__quat = np.array(rotation).reshape(4)
             self.style[QUAT] = 1
 
         else:
@@ -153,21 +153,21 @@ class Transform:
 
     def setMatrix3x3(self, input):
         if input.size == 9:
-            self.__matrix3x3 = input
+            self.__matrix3x3 = np.matrix(input).reshape(3, 3)
             self.style = np.array([1, 0, 0])
         else:
             print('Transform: Invalid input!')
 
     def setYPR(self, input):
         if input.size == 3:
-            self.__YPR = input
+            self.__YPR = np.array(input).reshape(3)
             self.style = np.array([0, 1, 0])
         else:
             print('Transform: Invalid input!')
 
     def setQuaternion(self, input):
         if input.size == 4:
-            self.__quat = input
+            self.__quat = np.array(input).reshape(4)
             self.style = np.array([0, 0, 1])
         else:
             print('Transform: Invalid input!')
@@ -187,7 +187,7 @@ class Transform:
             self.style[MATRIX] = 1
             return self.__matrix3x3
 
-    def getYPR(self, solu_style):
+    def getYPR(self, solu_style=1):
         if self.style[EULER]:
             return self.__YPR
         elif self.style[MATRIX]:
@@ -235,4 +235,3 @@ class Transform:
         # calculate the transform inverse
         inv = self.getMatrix4x4().I
         return Transform(inv[0:3, 3], inv[0:3, 0:3])
-    
