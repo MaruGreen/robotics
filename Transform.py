@@ -235,3 +235,5 @@ class Transform:
         # calculate the transform inverse
         inv = self.getMatrix4x4().I
         return Transform(inv[0:3, 3], inv[0:3, 0:3])
+
+    
