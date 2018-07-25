@@ -81,67 +81,71 @@ class Transform:
 
     def __Matrix3x3toYPR(self, solu_style):
         r = self.__matrix3x3
-        output1 = np.zeros([1, 3])
-        output0 = np.zeros([1, 3])
+        output1 = np.zeros([1, 3]).reshape(3)
+        output2 = np.zeros([1, 3]).reshape(3)
 
         # if pitch is not at a singularity
         if np.abs(r[2, 0]) >= 1:
-            output1[0, 0] = 0
-            output0[0, 0] = 0
+            output1[0] = 0
+            output2[0] = 0
             # if gimbal locked down
             if r[2, 0] < 0:
                 gamma = np.arctan2(r[0, 1], r[0, 2])
-                output1[0, 2] = gamma
-                output0[0, 2] = gamma
-                output1[0, 1] = np.pi / 2
-                output0[0, 1] = np.pi / 2
+                output1[2] = gamma
+                output2[2] = gamma
+                output1[1] = np.pi / 2
+                output2[1] = np.pi / 2
             # gimbal locked up
             else:
                 alpha = np.arctan2(-r[0, 1], -r[0, 2])
-                output1[0, 2] = gamma
-                output0[0, 2] = gamma
-                output1[0, 1] = -np.pi / 2
-                output0[0, 1] = -np.pi / 2
+                output1[2] = gamma
+                output2[2] = gamma
+                output1[1] = -np.pi / 2
+                output2[1] = -np.pi / 2
         # pitch is not at a singularity
         else:
             # calculate pitch (beta)
-            output1[0, 1] = -np.arcsin(r[2, 0])
-            output0[0, 1] = np.pi - output1[0, 1]
+            output1[1] = np.arcsin(-r[2, 0])
+            output2[1] = np.pi - output1[1]
+            if output2[1] > np.pi:
+                output2[1] -= 2 * np.pi
+            elif output2[1] < -np.pi:
+                output2[1] += 2 * np.pi
             # calculate roll (gamma)
-            output1[0, 2] = np.arctan2(r[2, 1] / np.cos(output1[0, 1]), r[2, 2] / np.cos(output1[0, 1]))
-            output0[0, 2] = np.arctan2(r[2, 1] / np.cos(output0[0, 1]), r[2, 2] / np.cos(output0[0, 1]))
+            output1[2] = np.arctan2(r[2, 1] / np.cos(output1[1]), r[2, 2] / np.cos(output1[1]))
+            output2[2] = np.arctan2(r[2, 1] / np.cos(output2[1]), r[2, 2] / np.cos(output2[1]))
             # calculate yaw (alpha)
-            output1[0, 0] = np.arctan2(r[1, 0] / np.cos(output1[0, 1]), r[0, 0] / np.cos(output1[0, 1]))
-            output0[0, 0] = np.arctan2(r[1, 0] / np.cos(output0[0, 1]), r[0, 0] / np.cos(output0[0, 1]))
+            output1[0] = np.arctan2(r[1, 0] / np.cos(output1[1]), r[0, 0] / np.cos(output1[1]))
+            output2[0] = np.arctan2(r[1, 0] / np.cos(output2[1]), r[0, 0] / np.cos(output2[1]))
 
-        if solu_style:
+        if solu_style == 1:
             self.__YPR = output1
         else:
-            self.__YPR = output0
+            self.__YPR = output2
 
     def __Matrix3x3toQuat(self):
         r = self.__matrix3x3
         trace = r[0, 0] + r[1, 1] + r[2, 2]
-        output = np.zeros([1, 4])
+        output = np.zeros([1, 4]).reshape(4)
         # if we set exactly 1 + trace > 0 then problems will occur
         if 1 + trace > 1e-8:
             s = np.sqrt(1 + trace)
-            output[0, 3] = s * 0.5
+            output[3] = s * 0.5
             s = 0.5 / s
-            output[0, 0] = (r[2, 1] - r[1, 2]) * s
-            output[0, 1] = (r[0, 2] - r[2, 0]) * s
-            output[0, 2] = (r[1, 0] - r[0, 1]) * s
+            output[0] = (r[2, 1] - r[1, 2]) * s
+            output[1] = (r[0, 2] - r[2, 0]) * s
+            output[2] = (r[1, 0] - r[0, 1]) * s
         # when trace(R) approaches zero
         else:
             i = (2 if r[1, 1] < r[2, 2] else 1) if r[0, 0] < r[1, 1] else (2 if r[0, 0] < r[2, 2] else 0)
             j = (i + 1) % 3
             k = (j + 1) % 3
             s = np.sqrt(r[i, i] - r[j, j] - r[k, k] + 1)
-            output[0, i] = s * 0.5
+            output[i] = s * 0.5
             s = 0.5 / s
-            output[0, 3] = (r[k, j] - r[j, k]) * s
-            output[0, j] = (r[j, i] + r[i, j]) * s
-            output[0, k] = (r[k, i] + r[i, k]) * s
+            output[3] = (r[k, j] - r[j, k]) * s
+            output[j] = (r[j, i] + r[i, j]) * s
+            output[k] = (r[k, i] + r[i, k]) * s
 
         self.__quat = output
 
@@ -188,17 +192,17 @@ class Transform:
             return self.__matrix3x3
 
     def getYPR(self, solu_style=1):
-        if self.style[EULER]:
+        if self.style[EULER] == solu_style:
             return self.__YPR
         elif self.style[MATRIX]:
             self.__Matrix3x3toYPR(solu_style)
-            self.style[EULER] = 1
+            self.style[EULER] = solu_style
             return self.__YPR
         elif self.style[QUAT]:
             self.__QuattoMatrix3x3()
             self.style[MATRIX] = 1
             self.__Matrix3x3toYPR(solu_style)
-            self.style[EULER] = 1
+            self.style[EULER] = solu_style
             return self.__YPR
 
     def getQuaternion(self):
@@ -236,3 +240,5 @@ class Transform:
         inv = self.getMatrix4x4().I
         return Transform(inv[0:3, 3], inv[0:3, 0:3])
 
+    
+    
