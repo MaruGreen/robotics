@@ -54,7 +54,7 @@ import static com.kuka.roboticsAPI.motionModel.BasicMotions.*;
  * @see #run()
  * @see #dispose()
  */
-public class LfD_lishidi extends RoboticsAPIApplication
+public class LfD_kdm extends RoboticsAPIApplication
 {
 	private Controller kuka_Sunrise_Cabinet_1;
 	private LBR lbr_iiwa_14_R820_1;
@@ -115,7 +115,7 @@ public class LfD_lishidi extends RoboticsAPIApplication
 		mode.parametrize(CartDOF.X).setStiffness(4000);  // range 0 - 5000
 		mode.parametrize(CartDOF.Y).setStiffness(4000);
 		mode.parametrize(CartDOF.Z).setStiffness(4000);
-		mode.setNullSpaceStiffness(200);                      // null space range 0 - 200
+		mode.setNullSpaceStiffness(1);                      // null space range 0 - 200
 
 		mode.parametrize(CartDOF.ALL).setDamping(0.7) ;
 		mode.setNullSpaceDamping(0.7);
@@ -181,12 +181,12 @@ public class LfD_lishidi extends RoboticsAPIApplication
 		//lbr_iiwa_14_R820_1.move(ptp(Math.toRadians(0.0), Math.toRadians(90.0), Math.toRadians(90.0), Math.toRadians(-90.0),
                                 //Math.toRadians(0.0), Math.toRadians(0.0), Math.toRadians(-35.0)).setJointVelocityRel(0.2));
 		//ThreadUtil.milliSleep(3000); // wait for 3 seconds
-        lbr_iiwa_14_R820_1.move(ptp(Math.toRadians(40.22), Math.toRadians(49.19), Math.toRadians(0.80), Math.toRadians(-83.60),
-        		Math.toRadians(120.23), Math.toRadians(61.71), Math.toRadians(-85.77)).setJointVelocityRel(0.3));
+        lbr_iiwa_14_R820_1.move(ptp(Math.toRadians(50.09), Math.toRadians(58.92), Math.toRadians(-1.76), Math.toRadians(-61.37),
+        		Math.toRadians(121.77), Math.toRadians(50.79), Math.toRadians(-136.98)).setJointVelocityRel(0.3));
 
 		if (FingerTip.getActReq() != 9)
     	{
-    		FingerTip.setActReq(9); // like grasp the ball-in-cup
+    		FingerTip.setActReq(9);
     	}
 
     	FingerTip.setSpeed(255);
@@ -247,6 +247,7 @@ public class LfD_lishidi extends RoboticsAPIApplication
 				ToolGripper.getFrame("/BasePad").move(ptp(getApplicationData().getFrame("/tableOrigin/P1")).setJointVelocityRel(0.1));
 			}
 
+			/******** SmartServo setting begins *********/
 			/*SmartServo aSmartServoMotion = new SmartServo(lbr_iiwa_14_R820_1.getCurrentJointPosition());
 			aSmartServoMotion.useTrace(true);
 
@@ -265,23 +266,44 @@ public class LfD_lishidi extends RoboticsAPIApplication
 
 			ToolGripper.getFrame("/BasePad").moveAsync(aSmartServoMotion.setMode(mode));
 			ISmartServoRuntime theServoRuntime = aSmartServoMotion.getRuntime();*/
+			/******** SmartServo setting ends *********/
+
+			/******** DirectServo setting begins *********/
+			/*DirectServo aDirectServoMotion = new DirectServo(lbr_iiwa_14_R820_1.getCurrentJointPosition());
+			aDirectServoMotion.useTrace(true);
+
+	        // for Automatic mode 0.25, for T1 mode 1
+	        aDirectServoMotion.setJointVelocityRel(1.0);  // para_flag
+	        aDirectServoMotion.setMinimumTrajectoryExecutionTime(5e-3);
+			aDirectServoMotion.setTimeoutAfterGoalReach(300);
+
+	        System.out.println("DirectServo: Starting Realtime Motion in Position Mode");
+
+  			if (aDirectServoMotion.validateForImpedanceMode(ToolGripper) != true)
+  			{
+  			    getLogger().info("Validation for SmartServo Compliant control failed");
+  			}
+
+			ToolGripper.getFrame("/BasePad").moveAsync(aDirectServoMotion.setMode(mode));
+			IDirectServoRuntime theServoRuntime = aDirectServoMotion.getRuntime();*/
+			/******** DirectServo setting ends *********/
 
 			/******** LIN setting begins *********/
 			SmartServoLIN aSmartServoLINMotion = new SmartServoLIN(lbr_iiwa_14_R820_1.getCurrentCartesianPosition(ToolGripper.getFrame("/BasePad")));
 	        aSmartServoLINMotion.useTrace(true);
 
 	        // set max vel and acc in Cartesian
-	        double maxTranslationVelocity[] = {750,500,750};
+	        double maxTranslationVelocity[] = {800,800,800};
 			aSmartServoLINMotion.setMaxTranslationVelocity(maxTranslationVelocity);
-			double maxTranslationAcceleration[] = {5000,4000,5000};
+			double maxTranslationAcceleration[] = {5500,5500,5500};
 			aSmartServoLINMotion.setMaxTranslationAcceleration(maxTranslationAcceleration);
 			double maxOrientationVelocity[] = {350,850,350};
 			aSmartServoLINMotion.setMaxOrientationVelocity(maxOrientationVelocity);
 			double maxOrientationAcceleration[] = {250,850,250};
 			aSmartServoLINMotion.setMaxOrientationAcceleration(maxOrientationAcceleration);
 
-			aSmartServoLINMotion.setMaxNullSpaceVelocity(100);
-			aSmartServoLINMotion.setMaxNullSpaceAcceleration(100);
+			aSmartServoLINMotion.setMaxNullSpaceVelocity(800);
+			aSmartServoLINMotion.setMaxNullSpaceAcceleration(5500);
 			aSmartServoLINMotion.setMinimumTrajectoryExecutionTime(20e-3);
 			aSmartServoLINMotion.setTimeoutAfterGoalReach(300);
 
@@ -299,9 +321,13 @@ public class LfD_lishidi extends RoboticsAPIApplication
 			Frame goalFrame = new Frame();
 			Frame currentFrame = new Frame();
 			double goalVelocity[] = new double[3];
+			// setDestination() has the limit for EulerAngleB, so we have to manipulate the joint position by ourselves
+			JointPosition goalJoint;
+			double realBetaRad, resultantBeta, goalBeta, originBetaRad;
 
 			// get goal Frame for the first time
 			goalFrame = lbr_iiwa_14_R820_1.getCurrentCartesianPosition(ToolGripper.getFrame("/BasePad"),getApplicationData().getFrame("/tableOrigin"));//getFrame("/BasePad"));
+			originBetaRad = goalFrame.getBetaRad();
 			ForceSensorData torData = lbr_iiwa_14_R820_1.getExternalForceTorque(ToolGripper.getRootFrame());//getFrame("/BasePad"));
 
 			double ForceX = torData.getForce().getX();
@@ -354,25 +380,29 @@ public class LfD_lishidi extends RoboticsAPIApplication
 		        		executing = true;
 		        		mode.parametrize(CartDOF.X).setStiffness(30);
 		        		mode.parametrize(CartDOF.Y).setStiffness(30);
+		        		mode.parametrize(CartDOF.Z).setStiffness(30);
 		        		mode.parametrize(CartDOF.A).setStiffness(15);
 		        		theServoRuntime.changeControlModeSettings(mode);
 		        		ThreadUtil.milliSleep(2000); // wait for 2 seconds
 
 		        		mode.parametrize(CartDOF.X).setStiffness(200);
 		        		mode.parametrize(CartDOF.Y).setStiffness(200);
+		        		mode.parametrize(CartDOF.Z).setStiffness(200);
 		        		mode.parametrize(CartDOF.A).setStiffness(50);
-		        		mode.setNullSpaceStiffness(200);
+		        		mode.setNullSpaceStiffness(1);
 		        		theServoRuntime.changeControlModeSettings(mode);
 		        		ThreadUtil.milliSleep(2000); // wait for 2 seconds
 
 		        		mode.parametrize(CartDOF.X).setStiffness(1000);
 		        		mode.parametrize(CartDOF.Y).setStiffness(1000);
+		        		mode.parametrize(CartDOF.Z).setStiffness(1000);
 		        		mode.parametrize(CartDOF.A).setStiffness(100);
 		        		theServoRuntime.changeControlModeSettings(mode);
 		        		ThreadUtil.milliSleep(2000); // wait for 2 seconds
 
 		        		mode.parametrize(CartDOF.X).setStiffness(4000);
 		        		mode.parametrize(CartDOF.Y).setStiffness(4000);
+		        		mode.parametrize(CartDOF.Z).setStiffness(4000);
 		        		mode.parametrize(CartDOF.A).setStiffness(300);
 		        		theServoRuntime.changeControlModeSettings(mode);
 		        		ThreadUtil.milliSleep(500); // wait for 0.5 seconds
@@ -381,17 +411,20 @@ public class LfD_lishidi extends RoboticsAPIApplication
 		        	case 2: // record command
 		        		break;
 
-		        	case 3: // teaching translation
+		        	case 3: // teaching
 		        		demo = true;
 		        		mode.parametrize(CartDOF.X).setStiffness(0);
 		        		mode.parametrize(CartDOF.Y).setStiffness(0);
-		        		//mode.parametrize(CartDOF.Z).setStiffness(0);
-		        		mode.parametrize(CartDOF.A).setStiffness(0);
+		        		mode.parametrize(CartDOF.Z).setStiffness(0);
+		        		//mode.parametrize(CartDOF.A).setStiffness(0);
 		        		mode.setNullSpaceStiffness(0);
 		        		theServoRuntime.changeControlModeSettings(mode);
 		        		break;
 
-		        	case 4:
+		        	case 4: // teaching rotation
+		        		demo = true;
+		        	    mode.parametrize(CartDOF.B).setStiffness(0);
+		        		theServoRuntime.changeControlModeSettings(mode);
 		        		break;
 
 		        	case 5:
@@ -429,7 +462,10 @@ public class LfD_lishidi extends RoboticsAPIApplication
 				// set the destination
 				if (demo)
 				{
-					theServoRuntime.setDestination(goalFrame);
+				    // this is trying to solve the Euler Angle B problem
+				    if (state == 4)
+                        goalFrame = lbr_iiwa_14_R820_1.getCurrentCartesianPosition(ToolGripper.getFrame("/BasePad"),getApplicationData().getFrame("/tableOrigin"));
+				    theServoRuntime.setDestination(goalFrame);
 				}
 				else
 				{
@@ -440,7 +476,9 @@ public class LfD_lishidi extends RoboticsAPIApplication
 						goalFrame.setY(recvDouble[3]);
 						goalFrame.setZ(recvDouble[4]);
 						goalFrame.setAlphaRad(recvDouble[5]);
-						goalFrame.setBetaRad(recvDouble[6]);
+						realBetaRad = recvDouble[6];
+						//goalFrame.setBetaRad(originBetaRad);
+						goalFrame.setBetaRad(realBetaRad);
 						goalFrame.setGammaRad(recvDouble[7]);
 
 						// calculate the translation velocity required
@@ -448,8 +486,18 @@ public class LfD_lishidi extends RoboticsAPIApplication
 						goalVelocity[1] = Math.abs(goalFrame.getY() - Old_RB1_y) * frequency;
 						goalVelocity[2] = Math.abs(goalFrame.getZ() - Old_RB1_z) * frequency;
 
-						// execute
+						// I cannot find any interface for goalJoint = function(goalFrame), so I have to do this
+						/*theServoRuntime.setDestination(goalFrame);
+						goalJoint = theServoRuntime.getCurrentJointDestination();
+						System.out.printf("goalJoint.get(5) = %f\n", goalJoint.get(5));
+						resultantBeta = goalJoint.get(5);
+						goalBeta = resultantBeta - (realBetaRad - originBetaRad);
+						System.out.printf("resultantBeta = %f\n", resultantBeta);
+						System.out.printf("realBetaRad = %f\n", realBetaRad);
+						goalJoint.set(5, goalBeta);*/
+						// now we can really execute
 						theServoRuntime.setDestination(goalFrame);
+						//theServoRuntime.setDestination(goalJoint);
 						/*if(getSqrSumSqrt(goalVelocity) > 1000 || getSqrSumSqrt(goalVelocity) < 120)
                         {
                             theServoRuntime.setDestination(goalFrame);
@@ -507,7 +555,7 @@ public class LfD_lishidi extends RoboticsAPIApplication
 	 */
 	public static void main(String[] args)
 	{
-		LfD_lishidi app = new LfD_lishidi();
+		LfD_kdm app = new LfD_kdm();
 		app.runApplication();
 	}
 }
